@@ -286,8 +286,6 @@ class ScrollView(View):
         to the beginning or end of the document.
         """
 
-        self.application.debug_log('Foo')
-
         if ev.key_code == 'Down':
             self.vertical_scroll(1)
         elif ev.key_code == 'Up':
