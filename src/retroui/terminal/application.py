@@ -157,6 +157,8 @@ class Application(Responder):
                 else:
                     debug_lines = ['DEBUG ' +
                                    line for line in self._debug_log[-10:]]
+                    debug_lines = [[Tixel(c, Color.White, Color.Black).render_to_screen_tixel()
+                                    for c in line] for line in debug_lines]
                     scr.draw(rendered_lines[:-10] + debug_lines)
                     # try:
                     #     for y, line in enumerate(self._debug_log[-10:]):
