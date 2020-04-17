@@ -16,6 +16,8 @@ class Box(View):
     __slots__ = ['content_view']
 
     def __init__(self):
+        super().__init__()
+
         self.content_view = EmptyView()
 
     def constrain_size(self, new_size):

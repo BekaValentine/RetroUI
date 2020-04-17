@@ -46,6 +46,8 @@ class ImageView(View):
                  'rendering_technique', '_render_lines', '_cache']
 
     def __init__(self):
+        super().__init__()
+
         self.image = None
         self._scaled_image = None
         self.scale = 1.0

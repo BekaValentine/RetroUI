@@ -36,6 +36,8 @@ class BarIndicator(View):
                  'readout_formatter', 'readout_position', 'readout_size']
 
     def __init__(self):
+        super().__init__()
+
         self.is_vertical = True
         self.value = 0.0
         self.readout_formatter = None
