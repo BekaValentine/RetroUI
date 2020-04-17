@@ -94,41 +94,41 @@ class ScrollView(View):
         horizontal scroller, respectively.
         """
 
-        cv = self.document_view
+        dv = self.document_view
 
-        if cv is None:
+        if dv is None:
             return (True, True)
 
-        elif cv.size.width <= self.size.width and cv.size.height <= self.size.height:
+        elif dv.size.width <= self.size.width and dv.size.height <= self.size.height:
             # Content is no larger than scrollview in both dimensions, can hide both
             return (True, True)
 
-        elif cv.size.width > self.size.width and cv.size.height > self.size.height:
+        elif dv.size.width > self.size.width and dv.size.height > self.size.height:
             # Content is larger than scrollview in both dimensions, cannot hide anything
             return (False, False)
 
-        elif cv.size.width < self.size.width and cv.size.height > self.size.height:
+        elif dv.size.width < self.size.width and dv.size.height > self.size.height:
             # Content is taller than scrollview, so must show vertical scroller
             # but content is strictly narrower than scrollview, so there's space for
             # vertical scroller without clipping any of the content and we can
             # hide the horizontal scroller
             return (False, True)
 
-        elif cv.size.width == self.size.width and cv.size.height > self.size.height:
+        elif dv.size.width == self.size.width and dv.size.height > self.size.height:
             # Content is taller than scrollview, so must show vertical scroller
             # and content is exactly as wide as scrollview, so the vertical scroller
             # will clip some content and we must show horizontal scroller
             return (False, False)
 
-        elif cv.size.width > self.size.width and cv.size.height < self.size.height:
+        elif dv.size.width > self.size.width and dv.size.height < self.size.height:
             # Content is wider than scrollview, so must show horizontal scroller
             # but content is strictly shorter than scrollview, so there's space for
             # horizontal scroller without clipping any of the content and we can
             # hide the vertical scroller
             return (True, False)
 
-        elif cv.size.width > self.size.width and cv.size.height == self.size.height:
-            # Content iswider than scrollview, so must show horizontal scroller
+        elif dv.size.width > self.size.width and dv.size.height == self.size.height:
+            # Content is wider than scrollview, so must show horizontal scroller
             # and content is exactly as tall as scrollview, so the horizontal scroller
             # will clip some content and we must show vertical scroller
             return (False, False)
