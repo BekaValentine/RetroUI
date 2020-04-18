@@ -2,37 +2,37 @@ from retroui.terminal.view import *
 from retroui.terminal.textview import *
 
 
-class SummaryView(View):
+class TextFoldView(View):
     """
-    A `SummaryView` is way to display text with a toggle-able limit on how much
+    A `TextFoldView` is way to display text with a toggle-able limit on how much
     can be seen.
 
     Slots:
 
         `_text_view`
-            The enclosed text view for showing the summary.
+            The enclosed text view for showing the folded text.
 
-        `summarized_text`
+        `folded_text`
             The text to summarize.
 
-        `summary_length`
+        `folded_length`
             The maximum length of the text to show when summarized. The text
-            will include an ellipsis at the end, so that the `summarized_text`
-            is clipped to three less than the `summary_length`.
+            will include an ellipsis at the end, so that the `folded_text`
+            is clipped to three less than the `folded_length`.
 
         `is_expanded`
-            Whether or not the summary is expanded to show the whole text.
+            Whether or not the text is expanded to show the whole of it.
     """
 
-    __slots__ = ['_text_view', 'summarized_text',
-                 'summary_length', 'is_expanded']
+    __slots__ = ['_text_view', 'folded_text',
+                 'folded_length', 'is_expanded']
 
     def __init__(self):
         super().__init__()
 
         self._text_view = TextView()
-        self.summarized_text = ''
-        self.summary_length = 4 * 80  # 4 lines of 80 column text
+        self.folded_text = ''
+        self.folded_length = 10 * 80  # 10 lines of 80 column text
         self.is_expanded = False
 
     def constrain_size(self, size):
@@ -45,20 +45,20 @@ class SummaryView(View):
         self.adjust_text_view()
         return Size(max(1, size.width), self._text_view.size.height + 1)
 
-    def set_summarized_text(self, text):
+    def set_folded_text(self, text):
         """
         Sets the text being summarized.
         """
 
-        self.summarized_text = text
+        self.folded_text = text
         self.adjust_size()
 
-    def set_summary_length(self, l):
+    def set_folded_length(self, l):
         """
-        Sets the summary length.
+        Sets the folded length.
         """
 
-        self.summary_length = int(l)
+        self.folded_length = int(l)
         self.adjust_size()
 
     def toggle_expanded(self):
@@ -84,10 +84,10 @@ class SummaryView(View):
         self._text_view.set_line_break_width(max(1, self.size.width))
 
         if self.is_expanded:
-            self._text_view.set_text(self.summarized_text)
+            self._text_view.set_text(self.folded_text)
         else:
             self._text_view.set_text(
-                self.summarized_text[:self.summary_length - 3] + '...')
+                self.folded_text[:self.folded_length - 3] + '...')
 
     def adjust_size(self):
         """
@@ -110,14 +110,16 @@ class SummaryView(View):
         lines = self._text_view.draw()
 
         if self.is_expanded:
-            pre = int((self.size.width - 14) / 2)
-            post = self.size.width - 14 - pre
+            label = ' [ Show Less ] '
+            pre = int((self.size.width - len(label)) / 2)
+            post = self.size.width - len(label) - pre
             lines += [[Tixel(c, Color.White, Color.Black)
-                       for c in (pre * '-' + ' [ Collapse ] ' + post * '-')]]
+                       for c in (pre * '-' + label + post * '-')]]
         else:
-            pre = int((self.size.width - 12) / 2)
-            post = self.size.width - 12 - pre
+            label = ' [ Show More ] '
+            pre = int((self.size.width - len(label)) / 2)
+            post = self.size.width - len(label) - pre
             lines += [[Tixel(c, Color.White, Color.Black)
-                       for c in (pre * '-' + ' [ Expand ] ' + post * '-')]]
+                       for c in (pre * '-' + label + post * '-')]]
 
         return lines
