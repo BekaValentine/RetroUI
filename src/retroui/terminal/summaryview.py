@@ -36,23 +36,45 @@ class SummaryView(View):
         self.is_expanded = False
 
     def constrain_size(self, size):
+        """
+        Constrain the size to be one taller than the contained text view, after
+        setting its line break width to be the given width.
+        """
+
+        self._text_view.set_line_break_width(size.width)
         self.adjust_text_view()
         return Size(max(1, size.width), self._text_view.size.height + 1)
 
     def set_summarized_text(self, text):
+        """
+        Sets the text being summarized.
+        """
+
         self.summarized_text = text
-        self.adjust_text_view()
+        self.adjust_size()
 
     def set_summary_length(self, l):
+        """
+        Sets the summary length.
+        """
+
         self.summary_length = int(l)
-        self.adjust_text_view()
+        self.adjust_size()
 
     def toggle_expanded(self):
+        """
+        Toggles whether the view is expanded to show the full text or not.
+        """
+
         self.set_is_expanded(not self.is_expanded)
 
     def set_is_expanded(self, yn):
+        """
+        Set whether the view is expanded to show the full text or not.
+        """
+
         self.is_expanded = bool(yn)
-        self.adjust_text_view()
+        self.adjust_size()
 
     def adjust_text_view(self):
         """
@@ -66,6 +88,13 @@ class SummaryView(View):
         else:
             self._text_view.set_text(
                 self.summarized_text[:self.summary_length - 3] + '...')
+
+    def adjust_size(self):
+        """
+        Trigger an update in the height of the view by setting it to 1.
+        """
+
+        self.set_size(Size(self.size.width, 1))
 
     def key_press(self, ev):
         if ev.key_code == 'Left':
