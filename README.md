@@ -1,2 +1,3 @@
 # RetroUI
-A retro-themed console UI framework written in Python.
+
+A retro-themed terminal UI framework written in Python.
