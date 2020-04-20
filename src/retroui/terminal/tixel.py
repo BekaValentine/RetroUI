@@ -19,6 +19,10 @@ class Tixel(object):
 
     """
 
+    @staticmethod
+    def tixels(line, fg, bg):
+        return [Tixel(c, fg, bg) for c in line]
+
     def __init__(self, ch, fg, bg):
         if len(ch) >= 1:
             self.character = ch[0]
