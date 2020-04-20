@@ -21,6 +21,11 @@ class Tixel(object):
 
     @staticmethod
     def tixels(line, fg, bg):
+        """
+        Convert a string into a line of tixels with the same foreground and
+        background colors.
+        """
+
         return [Tixel(c, fg, bg) for c in line]
 
     def __init__(self, ch, fg, bg):
