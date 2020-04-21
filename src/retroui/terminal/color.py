@@ -27,6 +27,7 @@ class Color(object):
 
 
 Color.Black = Color(0, 0, 0, 255)
+Color.Grey = Color.Gray = Color(127, 127, 127, 255)
 Color.White = Color(255, 255, 255, 255)
 Color.Red = Color(255, 0, 0, 255)
 Color.Orange = Color(255, 127, 0, 255)
