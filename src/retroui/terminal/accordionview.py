@@ -44,6 +44,7 @@ class AccordionView(View):
                 'is_expanded': False
             })
 
+        self._selected_index = 0
         if len(self._accordion_info) != 0:
             self._accordion_info[0]['is_expanded'] = True
 
