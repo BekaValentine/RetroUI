@@ -159,7 +159,12 @@ class Application(Responder):
                                    line for line in self._debug_log[-10:]]
                     debug_lines = [[Tixel(c, Color.White, Color.Black).render_to_screen_tixel()
                                     for c in line] for line in debug_lines]
-                    scr.draw(rendered_lines[:-10] + debug_lines)
+
+                    if len(rendered_lines) <= max_height:
+                        scr.draw(rendered_lines + (max_height -
+                                                   len(rendered_lines)) * [[]] + debug_lines)
+                    else:
+                        scr.draw(rendered_lines[:-10] + debug_lines)
                     # try:
                     #     for y, line in enumerate(self._debug_log[-10:]):
                     #         self._screen.addstr(
