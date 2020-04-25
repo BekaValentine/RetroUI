@@ -1,6 +1,7 @@
 import math
 
 from typing import List, Tuple
+from typing_extensions import Literal
 
 from retroui.terminal.color import Color, Black, Grey, White
 from retroui.terminal.event import Event
@@ -28,6 +29,10 @@ class TabInfoEntry(object):
         # type: (str, View) -> None
         self.title = title  # type: str
         self.view = view  # type: View
+
+
+TabStyle = Literal['left', 'center', 'right',
+                   'fill_align_left', 'fill_align_center', 'fill_align_right']
 
 
 class TabView(View):
@@ -79,7 +84,7 @@ class TabView(View):
 
         self._tab_info = []  # type: List[TabInfoEntry]
         self._selected_index = 0  # type: int
-        self.tab_style = 'left'  # type: str
+        self.tab_style = 'left'  # type: TabStyle
 
     def set_views(self, new_views):
         # type: (List[Tuple[str, View]]) -> None
@@ -99,15 +104,12 @@ class TabView(View):
         self._selected_index = 0
 
     def set_tab_style(self, style):
-        # type: (str) -> None
+        # type: (TabStyle) -> None
         """
         Sets the style of the tabs.
         """
 
-        if style in ['left', 'center', 'right', 'fill_align_left', 'fill_align_center', 'fill_align_right']:
-            self.tab_style = style
-        else:
-            self.tab_style = 'left'
+        self.tab_style = style
 
     def set_selection(self, ix):
         # type: (int) -> None

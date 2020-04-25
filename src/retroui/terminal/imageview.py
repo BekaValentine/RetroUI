@@ -1,4 +1,5 @@
-from typing import Dict, List, Optional, Tuple
+from typing import cast, Dict, List, Optional, Tuple
+from typing_extensions import Literal
 
 from retroui.terminal.color import Color
 from retroui.terminal.event import Event
@@ -6,6 +7,9 @@ from retroui.terminal.image import Image
 from retroui.terminal.size import Size
 from retroui.terminal.tixel import Tixel
 from retroui.terminal.view import View
+
+
+RenderingTechnique = Literal['dither', 'dither2', 'color']
 
 
 class ImageView(View):
@@ -59,17 +63,13 @@ class ImageView(View):
         self.image = None  # type: Optional[Image]
         self._scaled_image = None  # type: Optional[Image]
         self.scale = 1.0  # type: float
-        self.rendering_technique = 'color'  # type: str
+        self.rendering_technique = 'color'  # type: RenderingTechnique
         self._render_lines = []  # type: List[List[Tixel]]
         self._cache = {}  # type: Dict[Tuple[str, float], List[List[Tixel]]]
 
     def set_rendering_technique(self, technique):
-        # type: (str) -> None
-        if technique in ['dither', 'dither2', 'color']:
-            self.rendering_technique = technique
-
-        else:
-            self.rendering_technique = 'color'
+        # type: (RenderingTechnique) -> None
+        self.rendering_technique = technique
         self.render_image()
 
     def set_image(self, img):
@@ -136,7 +136,7 @@ class ImageView(View):
                 'color': 'dither'
             }
 
-            self.set_rendering_technique(rep[m])
+            self.set_rendering_technique(cast(RenderingTechnique, rep[m]))
 
         else:
             super().key_press(ev)

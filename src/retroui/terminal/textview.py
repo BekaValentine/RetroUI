@@ -2,11 +2,18 @@ import math
 import re
 import textwrap
 from typing import List, Optional
+from typing_extensions import Literal
 
 from retroui.terminal.color import Color, Black, White
 from retroui.terminal.size import Size
 from retroui.terminal.tixel import Tixel
 from retroui.terminal.view import View
+
+
+LineBreakMode = Literal['word_wrapping', 'char_wrapping', 'clipping',
+                        'truncating_head', 'truncating_tail', 'truncating_both']
+
+Alignment = Literal['left', 'center', 'right', 'justified']
 
 
 class TextView(View):
@@ -44,7 +51,6 @@ class TextView(View):
             `'truncating_tail'`
                 Text is displayed by showing the beginning of the text, and
                 replacing the end with an ellipsis.
-
 
             `'truncating_both'`
                 Text is displayed by showing the beginning and end of the text,
@@ -157,8 +163,8 @@ class TextView(View):
         self.text = ''  # type: str
         self._text_pars = []  # type: List[List[str]]
         self.line_break_width = None  # type: Optional[int]
-        self.line_break_mode = 'word_wrapping'  # type: str
-        self.alignment = 'left'  # type: str
+        self.line_break_mode = 'word_wrapping'  # type: LineBreakMode
+        self.alignment = 'left'  # type: Alignment
 
         self.recalculate_text_pars()
 
@@ -175,7 +181,7 @@ class TextView(View):
         self.recalculate_text_pars()
 
     def set_line_break_mode(self, mode):
-        # type: (str) -> None
+        # type: (LineBreakMode) -> None
         """
         Set the line break mode.
 
@@ -199,15 +205,12 @@ class TextView(View):
         self.recalculate_text_pars()
 
     def set_alignment(self, align):
-        # type: (str) -> None
+        # type: (Alignment) -> None
         """
         Set the text alignment.
         """
 
-        if align in ('left', 'right', 'center', 'justified'):
-            self.alignment = align
-        else:
-            self.alignment = 'left'
+        self.alignment = align
 
     def recalculate_text_pars(self):
         # type: () -> None

@@ -1,5 +1,7 @@
 import math
-from typing import List, Optional
+from typing import List, Optional, Union
+from typing_extensions import Literal
+
 
 from retroui.terminal.color import Color, Black, White
 from retroui.terminal.size import Size
@@ -7,6 +9,10 @@ from retroui.terminal.tixel import Tixel, tixels
 from retroui.terminal.view import View
 from retroui.terminal.clipview import ClipView
 from retroui.terminal.emptyview import EmptyView
+
+
+TitleStyle = Union[None, Literal['plain', 'fit_bar', 'full_width_bar']]
+TitleAlignment = Literal['left', 'center', 'right']
 
 
 class Box(View):
@@ -61,8 +67,8 @@ class Box(View):
         self.content_view = EmptyView()  # type: View
 
         self.title = ''  # type: str
-        self.title_style = None  # type: Optional[str]
-        self.title_alignment = 'left'  # type: str
+        self.title_style = None  # type: TitleStyle
+        self.title_alignment = 'left'  # type: TitleAlignment
 
     def constrain_size(self, new_size):
         # type: (Size) -> Size
@@ -106,18 +112,12 @@ class Box(View):
         self.title = title
 
     def set_title_style(self, style):
-        # type: (str) -> None
-        if style is None or style in ['plain', 'fit_bar', 'full_width_bar']:
-            self.title_style = style
-        else:
-            self.title_style = None
+        # type: (TitleStyle) -> None
+        self.title_style = style
 
     def set_title_alignment(self, alignment):
-        # type: (str) -> None
-        if alignment in ['left', 'center', 'right']:
-            self.title_alignment = alignment
-        else:
-            self.title_alignment = 'left'
+        # type: (TitleAlignment) -> None
+        self.title_alignment = alignment
 
     def draw(self):
         # type: () -> List[List[Tixel]]
