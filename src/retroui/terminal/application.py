@@ -1,10 +1,14 @@
+from typing import Generator, List, Optional
+
 # import curses
 import retroui.terminal.screen as screen
 
-from retroui.terminal.event import *
-from retroui.terminal.responder import *
-from retroui.terminal.size import *
-from retroui.terminal.emptyview import *
+from retroui.terminal.color import Color, Black, White
+from retroui.terminal.event import Event
+from retroui.terminal.responder import Responder, NoResponderException
+from retroui.terminal.size import Size
+from retroui.terminal.tixel import Tixel, tixels
+from retroui.terminal.view import View
 
 
 class Application(Responder):
@@ -36,26 +40,29 @@ class Application(Responder):
                  '_screen', '_debug', '_debug_log']
 
     def __init__(self):
+        # type: () -> None
         super().__init__()
-        self.name = 'Application'
-        self._main_view = None
-        self._first_responder = None
-        self._screen = None
-        self._debug = False
-        self._debug_log = []
+        self.name = 'Application'  # type: str
+        self._main_view = None  # type: Optional[View]
+        self._first_responder = None  # type: Optional[Responder]
+        self._screen = None  # type: Optional[screen.Screen]
+        self._debug = False  # type: bool
+        self._debug_log = []  # type: List[str]
 
-    def set_first_responder(self, view):
+    def set_first_responder(self, responder):
+        # type: (Responder) -> None
         """
         Sets the first responder of the application.
         """
 
         if (self._first_responder is None or self._first_responder.resign_first_responder()) and\
-                view.accepts_first_responder() and\
-                view.become_first_responder():
+                responder.accepts_first_responder() and\
+                responder.become_first_responder():
 
-            self._first_responder = view
+            self._first_responder = responder
 
     def no_responder(self, event):
+        # type: (Event) -> None
         """
         Allow the event to fall off the responder chain silently.
 
@@ -66,23 +73,31 @@ class Application(Responder):
         pass
 
     def set_main_view(self, view):
+        # type: (View) -> None
         """
         Set the main view of the application.
         """
 
         self._main_view = view
         view.set_application(self)
-        view.set_size(self.main_view_size())
+        s = self.main_view_size()
+        if s is not None:
+            view.set_size(s)
 
     def main_view_size(self):
+        # type: () -> Optional[Size]
         """
         Calculate the size for the main view of the application.
         """
 
-        width, height = self._screen.get_size()
-        return Size(width, height)
+        if self._screen is None:
+            return None
+        else:
+            width, height = self._screen.get_size()
+            return Size(width, height)
 
     def set_debug(self, yn):
+        # type: (bool) -> None
         """
         Set whether or not the application is in debug mode.
         """
@@ -90,6 +105,7 @@ class Application(Responder):
         self._debug = yn
 
     def debug_log(self, msg):
+        # type: (str) -> None
         """
         Write a message to the debug log.
         """
@@ -97,6 +113,7 @@ class Application(Responder):
         self._debug_log.append(msg)
 
     def on_run(self):
+        # type: () -> None
         """
         Setup the application to run.
 
@@ -107,6 +124,7 @@ class Application(Responder):
         pass
 
     def on_terminate(self):
+        # type: () -> None
         """
         Tear down the application after running.
 
@@ -117,6 +135,7 @@ class Application(Responder):
         pass
 
     def run(self):
+        # type: () -> None
         """
         Run the application.
 
@@ -126,12 +145,12 @@ class Application(Responder):
         as well as  the setup and teardown of the application.
         """
 
-        screen.ScreenManager().run_app(self)
+        screen.ScreenManager().run_app(self.run_with_screen)
         # curses.wrapper(main)
 
     def run_with_screen(self, scr):
+        # type: (screen.Screen) -> Generator[None, Optional[screen.Event], None]
         self._screen = scr
-        # curses.curs_set(0)
         self.on_run()
 
         # The main event loop
@@ -139,8 +158,18 @@ class Application(Responder):
             # screen.erase()
             if self._main_view:
                 rendered_lines = self._main_view.draw()
-                rendered_lines = [[tixel.render_to_screen_tixel()
-                                   for tixel in line] for line in rendered_lines]
+                rendered_lines_for_screen = []
+                line = []  # type: List[Tixel]
+                for line in rendered_lines:
+                    rendered_line = []
+                    for tixel in line:
+                        scrtx = tixel.render_to_screen_tixel()
+                        rendered_line.append(screen.ScreenTixel(
+                            scrtx[0],
+                            None if scrtx[1] is None else screen.ScreenColor(
+                                scrtx[1][0], scrtx[1][1], scrtx[1][2]),
+                            None if scrtx[2] is None else screen.ScreenColor(scrtx[2][0], scrtx[2][1], scrtx[2][2])))
+                    rendered_lines_for_screen.append(rendered_line)
 
                 max_height, max_width = scr.get_size()
                 if self._debug:
@@ -150,21 +179,33 @@ class Application(Responder):
                 #         self._screen.addstr(y, 0, line[:max_width])
                 # except curses.error:
                 #     pass
-                scr.draw(rendered_lines)
+                # scr.draw(rendered_lines_for_screen)
 
                 if not self._debug:
-                    scr.draw(rendered_lines)
+                    #raise ValueError(rendered_lines[0][:5])
+                    scr.draw(rendered_lines_for_screen)
                 else:
                     debug_lines = ['DEBUG ' +
                                    line for line in self._debug_log[-10:]]
-                    debug_lines = [[Tixel(c, Color.White, Color.Black).render_to_screen_tixel()
-                                    for c in line] for line in debug_lines]
+                    debug_lines_for_screen = []
+                    debug_line = ''  # type: str
+                    for debug_line in debug_lines:
+                        rendered_line = []
+                        for tixel in tixels(debug_line, White, Black):
+                            scrtx = tixel.render_to_screen_tixel()
+                            rendered_line.append(screen.ScreenTixel(
+                                scrtx[0],
+                                None if scrtx[1] is None else screen.ScreenColor(
+                                    scrtx[1][0], scrtx[1][1], scrtx[1][2]),
+                                None if scrtx[2] is None else screen.ScreenColor(scrtx[2][0], scrtx[2][1], scrtx[2][2])))
+                        debug_lines_for_screen.append(rendered_line)
 
-                    if len(rendered_lines) <= max_height:
-                        scr.draw(rendered_lines + (max_height -
-                                                   len(rendered_lines)) * [[]] + debug_lines)
+                    if len(rendered_lines_for_screen) <= max_height:
+                        scr.draw(rendered_lines_for_screen + (max_height -
+                                                              len(rendered_lines_for_screen)) * screen.ScreenContent([[]]) + debug_lines_for_screen)
                     else:
-                        scr.draw(rendered_lines[:-10] + debug_lines)
+                        scr.draw(rendered_lines_for_screen[: -10] +
+                                 debug_lines_for_screen)
                     # try:
                     #     for y, line in enumerate(self._debug_log[-10:]):
                     #         self._screen.addstr(
@@ -176,7 +217,9 @@ class Application(Responder):
             screen_event = yield
             # ch == KEY_RESIZE:
             if isinstance(screen_event, screen.ResizeEvent):
-                self._main_view.set_size(self.main_view_size())
+                s = self.main_view_size()
+                if self._main_view is not None and s is not None:
+                    self._main_view.set_size(s)
             elif isinstance(screen_event, screen.KeyPressEvent):
                 ev = Event(screen_event.key_code, screen_event.has_ctrl_modifier,
                            screen_event.has_alt_modifier, screen_event.has_shift_modifier)

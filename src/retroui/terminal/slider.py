@@ -1,5 +1,11 @@
 import math
-from retroui.terminal.view import *
+from typing import List
+
+from retroui.terminal.color import Color, Black, White
+from retroui.terminal.event import Event
+from retroui.terminal.size import Size
+from retroui.terminal.tixel import Tixel
+from retroui.terminal.view import View
 
 
 class Slider(View):
@@ -24,13 +30,15 @@ class Slider(View):
     __slots__ = ['value', 'divisions', 'is_vertical']
 
     def __init__(self):
+        # type: () -> None
         super().__init__()
 
-        self.value = 0
-        self.divisions = 3
-        self.is_vertical = False
+        self.value = 0  # type: int
+        self.divisions = 3  # type: int
+        self.is_vertical = False  # type: bool
 
     def constrain_size(self, size):
+        # type: (Size) -> Size
         """
         Constrain the size to be a minimum of 3 in the sliding direction, and to
         be 3 wide for vertical sliders, and 1 high for horizontal sliders.
@@ -42,14 +50,16 @@ class Slider(View):
             return Size(max(3, size.width), 1)
 
     def set_is_vertical(self, yn):
+        # type: (bool) -> None
         """
         Set whether or not the slider is vertical.
         """
 
-        self.is_vertical = bool(yn)
+        self.is_vertical = yn
         self.recalculate_size()
 
     def recalculate_size(self):
+        # type: () -> None
         """
         Force a recalculation of the size using the current size as the basis.
         """
@@ -57,6 +67,7 @@ class Slider(View):
         self.set_size(self.size)
 
     def set_value(self, val):
+        # type: (int) -> None
         """
         Set the value of the slider.
         """
@@ -64,6 +75,7 @@ class Slider(View):
         self.value = max(0, min(self.divisions - 1, int(val)))
 
     def set_divisions(self, divs):
+        # type: (int) -> None
         """
         Set how many divisions the slider has.
         """
@@ -75,6 +87,7 @@ class Slider(View):
         self.set_value(self.value)
 
     def key_press(self, ev):
+        # type: (Event) -> None
         if self.is_vertical and ev.key_code == 'Up':
             self.set_value(self.value + 1)
         elif self.is_vertical and ev.key_code == 'Down':
@@ -87,6 +100,7 @@ class Slider(View):
             super().key_press(ev)
 
     def draw(self):
+        # type: () -> List[List[Tixel]]
 
         if self.is_vertical:
             position = math.floor(
@@ -94,7 +108,7 @@ class Slider(View):
             pre = self.size.height - position - 1
             post = position
             lines = pre * [' | '] + ['==='] + post * [' | ']
-            return [[Tixel(c, Color.White, Color.Black)
+            return [[Tixel(c, White, Black)
                      for c in line] for line in lines]
         else:
             position = math.floor(
@@ -102,4 +116,4 @@ class Slider(View):
             pre = position
             post = self.size.width - position - 1
             line = pre * '-' + '|' + post * '-'
-            return [[Tixel(c, Color.White, Color.Black) for c in line]]
+            return [[Tixel(c, White, Black) for c in line]]

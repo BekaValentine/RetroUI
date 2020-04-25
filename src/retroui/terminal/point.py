@@ -14,8 +14,10 @@ class Point(object):
     __slots__ = ['x', 'y']
 
     def __init__(self, x, y):
-        self.x = x
-        self.y = y
+        # type: (int, int) -> None
+        self.x: int = x
+        self.y: int = y
 
     def __repr__(self):
+        # type: () -> str
         return 'Point(%i,%i)' % (self.x, self.y)

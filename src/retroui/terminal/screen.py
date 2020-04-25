@@ -6,6 +6,7 @@ import termios
 import multiprocessing
 import tty
 import traceback
+from typing import Any, Callable, Generator, List, NewType, Optional, Tuple, Union
 
 
 ESCAPE_SEQUENCES = {
@@ -59,6 +60,116 @@ MODIFIERS = {
 }
 
 
+class ScreenColor(object):
+    """
+    A `ScreenColor` is how the screen represents color.
+    """
+
+    def __init__(self, r, g, b):
+        # type: (int,int,int) -> None
+        self.r: int = r
+        self.g: int = g
+        self.b: int = b
+
+    def __repr__(self):
+        # type: () -> str
+        return 'ScreenColor(%s,%s,%s)' % (self.r, self.g, self.b)
+
+
+class ScreenTixel(object):
+    """
+    A `ScreenTixel` is how the screen represents tixels.
+    """
+
+    def __init__(self, ch, fg, bg):
+        # type: (str,Optional[ScreenColor],Optional[ScreenColor]) -> None
+        self.character = ch  # type: str
+        self.foreground = fg  # type: Optional[ScreenColor]
+        self.background = bg  # type: Optional[ScreenColor]
+
+    def __repr__(self):
+        # type: () -> str
+
+        return 'ScreenTixel(%s,%s,%s)' % (repr(self.character), self.foreground, self.background)
+
+
+ScreenLine = List[ScreenTixel]
+ScreenContent = List[ScreenLine]
+
+
+class Screen(object):
+    """
+    A `Screen` is an abstract representation of the screen that hosted
+    applications can interface with.
+
+    Slots:
+
+        '_manager'
+            The `ScreenManager` that is actually managing the screen.
+    """
+
+    __slots__ = ['_manager']
+
+    def __init__(self, manager):
+        # type: (ScreenManager) -> None
+        self._manager = manager  # type: ScreenManager
+
+    def draw(self, lines):
+        # type: (ScreenContent) -> None
+        """
+        Replaces the entire contents of the screen with the specified lines,
+        clipping them to fit the screen size.
+
+        If the lines do not cover the screen, the remaining space is left blank.
+        """
+
+        self._manager.application_draw(lines)
+
+    def get_size(self):
+        # type: () -> Tuple[int, int]
+        """
+        Gets the screen size.
+        """
+
+        return (self._manager.width, self._manager.height)
+
+    def get_cursor_position(self):
+        # type: () -> Optional[Tuple[int, int]]
+        """
+        Gets the cursor position.
+        """
+
+        return self._manager._application_cursor_position
+
+    def set_cursor_position(self, x, y):
+        # type: (int,int) -> None
+        """
+        Sets the cursor position.
+        """
+
+        # self._manager._main_queue.put(SetCursorPosition(x, y))
+        # self.cursor_position = (int(x), int(y))
+        self._manager.application_set_cursor_position(x, y)
+
+    def show_cursor(self):
+        # type: () -> None
+        """
+        Shows the cursor.
+        """
+
+        # self._manager._main_queue.put(ShowCursor())
+        self._manager.application_show_cursor()
+
+    def hide_cursor(self):
+        # type: () -> None
+        """
+        Hides the cursor.
+        """
+
+        # self._manager._main_queue.put(HideCursor())
+        self._manager.application_hide_cursor()
+
+
 class ScreenManager(object):
     """
     A `Screen` is a convenient wrapper around the functionality for interfacing
@@ -110,19 +221,64 @@ class ScreenManager(object):
                  '_main_queue', '_application_cursor_is_visible', '_application_cursor_position', '_screen_contents', '_debug', '_log']
 
     def __init__(self):
-        self._cursor_is_visible = True
-        self._cursor_position = None
-        self._original_terminal_settings = None
-        self._main_queue = None
-        self._application_cursor_is_visible = False
-        self._application_cursor_position = (0, 0)
-        self._screen_contents = []
-        self._debug = False
-        self._log = []
+        # type: () -> None
+        self._cursor_is_visible = True  # type: bool
+        self._cursor_position = (0, 0)  # type: Tuple[int,int]
+        self._original_terminal_settings = []  # type: List[Union[int, List[bytes]]]
+        self._main_queue = multiprocessing.Queue() \
+            # type:  multiprocessing.Queue[Event]
+        self._application_cursor_is_visible = False  # type: bool
+        self._application_cursor_position = (0, 0)  # type: Tuple[int, int]
+        self._screen_contents = []  # type: ScreenContent
+        self._debug = False  # type: bool
+        self._log = []  # type: List[str]
 
     # ##### Managing Applications ##############################################
 
-    def run_app(self, application):
+    def setup(self):
+        # type: () -> None
+        """
+        Gets the terminal ready for the main callback to use it.
+
+        Stores terminal properties from before it was grabbed, manages the
+        cleaning of the screen, the input events, and resize events.
+        """
+
+        size = os.get_terminal_size()
+        self.width = size.columns
+        self.height = size.lines
+
+        self._original_terminal_settings = termios.tcgetattr(sys.stdin)
+        tty.setraw(sys.stdin)
+
+        self.hide_cursor()
+
+        self._cursor_position = (0, 0)
+
+        self.start_alternate_screen()
+        self.blank_screen()
+        sys.stdout.flush()
+
+    def teardown(self):
+        # type: () -> None
+        """
+        Returns the screen to the previous state before it was grabbed.
+        """
+
+        self.set_cursor_position(0, 0)
+        self.blank_screen()
+        self.close_alternate_screen()
+
+        self.show_cursor()
+
+        self.flush_stdio()
+
+        termios.tcsetattr(sys.stdin,
+                          termios.TCSADRAIN,
+                          self._original_terminal_settings)
+
+    def run_app(self, make_application_coroutine):
+        # type: (Callable[[Screen], Generator[None, Optional['Event'], None]]) -> None
         """
         Sets up the screen, spins off threads for the keyboard monitor callback,
         and the resize event listener, and then waits for events to handle. When
@@ -135,6 +291,7 @@ class ScreenManager(object):
         self._main_queue = multiprocessing.Queue()
 
         def keypress_handler():
+            # type: () -> None
             sys.stdin = open(0)
             while True:
                 ch = self.getch()
@@ -145,6 +302,7 @@ class ScreenManager(object):
         kb_monitor.start()
 
         def resize_handler(signum, frame):
+            # type: (Any,Any) -> None
             size = os.get_terminal_size()
             self._main_queue.put(ResizeEvent(size.columns, size.lines))
 
@@ -152,7 +310,7 @@ class ScreenManager(object):
 
         should_exit = False
 
-        application_coroutine = application.run_with_screen(Screen(self))
+        application_coroutine = make_application_coroutine(Screen(self))
 
         try:
             application_coroutine.send(None)
@@ -187,47 +345,8 @@ class ScreenManager(object):
         if err is not None:
             raise err
 
-    def setup(self):
-        """
-        Gets the terminal ready for the main callback to use it.
-
-        Stores terminal properties from before it was grabbed, manages the
-        cleaning of the screen, the input events, and resize events.
-        """
-
-        size = os.get_terminal_size()
-        self.width = size.columns
-        self.height = size.lines
-
-        self._original_terminal_settings = termios.tcgetattr(sys.stdin)
-        tty.setraw(sys.stdin)
-
-        self.hide_cursor()
-
-        self._cursor_position = (0, 0)
-
-        self.start_alternate_screen()
-        self.blank_screen()
-        sys.stdout.flush()
-
-    def teardown(self):
-        """
-        Returns the screen to the previous state before it was grabbed.
-        """
-
-        self.set_cursor_position(0, 0)
-        self.blank_screen()
-        self.close_alternate_screen()
-
-        self.show_cursor()
-
-        self.flush_stdio()
-
-        termios.tcsetattr(sys.stdin,
-                          termios.TCSADRAIN,
-                          self._original_terminal_settings)
-
     def set_size(self, width, height):
+        # type: (int,int) -> None
         """
         Resizes the screen and cleans up the resized screen.
         """
@@ -238,6 +357,7 @@ class ScreenManager(object):
     # ##### Interacting With The Terminal ######################################
 
     def flush_stdio(self):
+        # type: () -> None
         """
         Flush the standard input.
         """
@@ -245,6 +365,7 @@ class ScreenManager(object):
         termios.tcflush(sys.stdin.fileno(), termios.TCIFLUSH)
 
     def start_alternate_screen(self):
+        # type: () -> None
         """
         Starts the alternate terminal screen.
         """
@@ -252,6 +373,7 @@ class ScreenManager(object):
         sys.stdout.write('\x1b[?1049h')
 
     def close_alternate_screen(self):
+        # type: () -> None
         """
         Closes the alternate terminal screen.
         """
@@ -260,17 +382,19 @@ class ScreenManager(object):
 
     @staticmethod
     def enforce_screen_width(tixels, width):
+        # type: (ScreenLine,int) -> ScreenLine
         """
         Enforce that a line of tixels is exactly as wide as the screen.
         """
 
         if len(tixels) < width:
-            return tixels + (width - len(tixels)) * [(' ', (0, 0, 0), (0, 0, 0))]
+            return tixels + (width - len(tixels)) * [ScreenTixel(' ', ScreenColor(0, 0, 0), ScreenColor(0, 0, 0))]
         else:
             return tixels[:width]
 
     @staticmethod
     def enforce_screen_height(lines, height):
+        # type: (ScreenContent,int) -> ScreenContent
         """
         Enforce that a screenful of tixel lines is exactly as tall as the
         screen.
@@ -283,6 +407,7 @@ class ScreenManager(object):
 
     @staticmethod
     def enforce_screen_size(lines, width, height):
+        # type: (ScreenContent, int, int) -> ScreenContent
         """
         Enforce that a screenful of tixel lines is exactly as wide and as tall
         as the screen.
@@ -295,6 +420,7 @@ class ScreenManager(object):
 
     @staticmethod
     def line_to_terminal_line(line):
+        # type: (ScreenLine) -> str
         """
         Convert a line of tixels to a line of terminal text, with the smallest
         amount of color information as possible.
@@ -302,36 +428,43 @@ class ScreenManager(object):
 
         terminal_line = ''
 
-        fg_color = None
-        bg_color = None
+        fg_color = ScreenColor(0, 0, 0)  # type: ScreenColor
+        bg_color = ScreenColor(0, 0, 0)  # type: ScreenColor
 
-        for i, (ch, fg, bg) in enumerate(line):
+        for i, tx in enumerate(line):
+            ch = tx.character
+            fg = tx.foreground
+            bg = tx.background
             if i == 0:
                 if fg is None:
-                    fg_color = (255, 255, 255)
+                    fg_color = ScreenColor(255, 255, 255)
                 else:
                     fg_color = fg
 
                 if bg is None:
-                    bg_color = (0, 0, 0)
+                    bg_color = ScreenColor(0, 0, 0)
                 else:
                     bg_color = bg
 
                 # add the initial fg color
-                terminal_line += '\x1b[38;2;{};{};{}m'.format(*fg_color)
+                terminal_line += '\x1b[38;2;{};{};{}m'.format(
+                    fg_color.r, fg_color.g, fg_color.b)
 
                 # add the initial bg color
-                terminal_line += '\x1b[48;2;{};{};{}m'.format(*bg_color)
+                terminal_line += '\x1b[48;2;{};{};{}m'.format(
+                    bg_color.r, bg_color.g, bg_color.b)
             else:
                 if fg is not None and fg != fg_color:
                     # set the new fg color
                     fg_color = fg
-                    terminal_line += '\x1b[38;2;{};{};{}m'.format(*fg_color)
+                    terminal_line += '\x1b[38;2;{};{};{}m'.format(
+                        fg_color.r, fg_color.g, fg_color.b)
 
                 if bg is not None and bg != bg_color:
                     # set the new bg color
                     bg_color = bg
-                    terminal_line += '\x1b[48;2;{};{};{}m'.format(*bg_color)
+                    terminal_line += '\x1b[48;2;{};{};{}m'.format(
+                        bg_color.r, bg_color.g, bg_color.b)
 
             terminal_line += ch
 
@@ -342,6 +475,7 @@ class ScreenManager(object):
 
     @staticmethod
     def lines_to_terminal_lines(lines):
+        # type: (ScreenContent) -> List[str]
         """
         Converts a screenful of tixel lines to a screenful of terminal lines.
         """
@@ -349,6 +483,7 @@ class ScreenManager(object):
         return [ScreenManager.line_to_terminal_line(line) for line in lines]
 
     def draw(self, new_contents):
+        # type: (ScreenContent) -> None
         """
         Replaces the content of the screen with the given lines.
         """
@@ -358,9 +493,9 @@ class ScreenManager(object):
             new_contents, self.width, self.height)
 
         # compute terminal string representations
-        new_terminal_lines = ScreenManager.lines_to_terminal_lines(
-            new_contents)
-
+        new_terminal_lines = \
+            ScreenManager.lines_to_terminal_lines(
+                new_contents)  # type: List[str]
         # diff the new and old contents
         # CAUTION: Diffing does NOT currently work with color
         #
@@ -375,7 +510,7 @@ class ScreenManager(object):
         #         write_cmd += '\x1b[{y};{x}H{s}'.format(
         #             x=x + 1, y=y + 1, s=new_substr)
 
-        write_cmd = ''
+        write_cmd = ''  # type: str
         for y, line in enumerate(new_terminal_lines):
             write_cmd += '\x1b[{y};0H{s}'.format(y=y + 1, s=line)
 
@@ -389,13 +524,16 @@ class ScreenManager(object):
         self.set_cursor_position(0, 0)
 
     def blank_screen(self):
+        # type: () -> None
         """
         Fills the screen with blank space.
         """
 
-        self.draw(self.height * [self.width * [(' ', None, None)]])
+        self.draw(self.height *
+                  [self.width * [ScreenTixel(' ', None, None)]])
 
     def terminal_cursor_position(self):
+        # type: () -> Optional[Tuple[int, int]]
         """
         Determines the current cursor position in the terminal.
         """
@@ -422,6 +560,7 @@ class ScreenManager(object):
         return None
 
     def show_cursor(self):
+        # type: () -> None
         """
         Show the cursor.
         """
@@ -432,6 +571,7 @@ class ScreenManager(object):
         self._cursor_is_visible = True
 
     def hide_cursor(self):
+        # type: () -> None
         """
         Hide the cursor.
         """
@@ -442,6 +582,7 @@ class ScreenManager(object):
         self._cursor_is_visible = False
 
     def set_cursor_position(self, x, y):
+        # type: (int,int) -> None
         """
         Sets the position of the cursor.
         """
@@ -451,6 +592,7 @@ class ScreenManager(object):
         sys.stdout.flush()
 
     def getch(self):
+        # type: () -> Tuple[str, bool, bool, bool]
         """
         Reads a character from standard input.
 
@@ -483,6 +625,7 @@ class ScreenManager(object):
     # ###### Handling Application Messages #####################################
 
     def application_set_cursor_position(self, x, y):
+        # type: (int,int) -> None
         """
         Sets the hosted-program-managed cursor position.
         """
@@ -491,6 +634,7 @@ class ScreenManager(object):
         self._application_cursor_position = (int(x), int(y))
 
     def application_hide_cursor(self):
+        # type: () -> None
         """
         Hides the cursor.
         """
@@ -499,6 +643,7 @@ class ScreenManager(object):
         self._application_cursor_is_visible = False
 
     def application_show_cursor(self):
+        # type: () -> None
         """
         Shows the cursor.
         """
@@ -507,6 +652,7 @@ class ScreenManager(object):
         self._application_cursor_is_visible = True
 
     def application_draw(self, lines):
+        # type: (ScreenContent) -> None
         """
         Replaces the entire contents of the screen with the specified lines,
         clipping them to fit the screen size.
@@ -525,72 +671,6 @@ class ScreenManager(object):
             self.show_cursor()
 
         sys.stdout.flush()
-
-
-class Screen(object):
-    """
-    A `Screen` is an abstract representation of the screen that hosted
-    applications can interface with.
-
-    Slots:
-
-        '_manager'
-            The `ScreenManager` that is actually managing the screen.
-    """
-
-    __slots__ = ['_manager']
-
-    def __init__(self, manager):
-        self._manager = manager
-
-    def draw(self, lines):
-        """
-        Replaces the entire contents of the screen with the specified lines,
-        clipping them to fit the screen size.
-
-        If the lines do not cover the screen, the remaining space is left blank.
-        """
-
-        self._manager.application_draw(lines)
-
-    def get_size(self):
-        """
-        Gets the screen size.
-        """
-
-        return (self._manager.width, self._manager.height)
-
-    def get_cursor_position(self):
-        """
-        Gets the cursor position.
-        """
-
-        return self._manager._application_cursor_position
-
-    def set_cursor_position(self, x, y):
-        """
-        Sets the cursor position.
-        """
-
-        # self._manager._main_queue.put(SetCursorPosition(x, y))
-        # self.cursor_position = (int(x), int(y))
-        self._manager.application_set_cursor_position(x, y)
-
-    def show_cursor(self):
-        """
-        Shows the cursor.
-        """
-
-        # self._manager._main_queue.put(ShowCursor())
-        self._manager.application_show_cursor()
-
-    def hide_cursor(self):
-        """
-        Hides the cursor.
-        """
-
-        # self._manager._main_queue.put(HideCursor())
-        self._manager.application_hide_cursor()
 
 
 class Event(object):
@@ -625,12 +705,14 @@ class KeyPressEvent(Event):
                  'has_alt_modifier', 'has_shift_modifier']
 
     def __init__(self, kc, ctrl_mod, alt_mod, shift_mod):
-        self.key_code = kc
-        self.has_ctrl_modifier = ctrl_mod
-        self.has_alt_modifier = alt_mod
-        self.has_shift_modifier = shift_mod
+        # type: (str,bool,bool,bool) -> None
+        self.key_code = kc  # type: str
+        self.has_ctrl_modifier = ctrl_mod  # type: bool
+        self.has_alt_modifier = alt_mod  # type: bool
+        self.has_shift_modifier = shift_mod  # type: bool
 
     def __repr__(self):
+        # type: () -> str
         return '<KeyPressEvent key_code=%s ctrl=%s alt=%s shift=%s>' % (repr(self.key_code), self.has_ctrl_modifier, self.has_alt_modifier, self.has_shift_modifier)
 
 
@@ -650,14 +732,20 @@ class ResizeEvent(Event):
     __slots__ = ['new_width', 'new_height']
 
     def __init__(self, nw, nh):
-        self.new_width = nw
-        self.new_height = nh
+        # type: (int,int) -> None
+        self.new_width = nw  # type: int
+        self.new_height = nh  # type: int
 
     def __repr__(self):
+        # type: () -> str
         return '<ResizeEvent new_width=%i new_height=%i>' % (self.new_width, self.new_height)
 
 
+LineDiff = NewType('LineDiff', List[Tuple[int, str]])
+
+
 def line_diff(old, new):
+    # type: (str,str) -> LineDiff
     """
     Compute the difference between two equal-length lines of text.
 
@@ -698,10 +786,14 @@ def line_diff(old, new):
             else:
                 ds.append((len(old), new[len(old):]))
 
-    return ds
+    return LineDiff(ds)
+
+
+MultiLineDiff = NewType('MultiLineDiff', List[Tuple[int, LineDiff]])
 
 
 def multiline_diff(olds, news):
+    # type: (List[str], List[str]) -> MultiLineDiff
     """
     Computes the difference betweent two equal length lists of equal length
     lines.
@@ -710,7 +802,7 @@ def multiline_diff(olds, news):
     and the line difference of the two lines.
     """
 
-    ds = []
+    ds = []  # type: List[Tuple[int, LineDiff]]
 
     for i, (old, new) in enumerate(zip(olds, news)):
         d = line_diff(old, new)
@@ -719,9 +811,9 @@ def multiline_diff(olds, news):
 
     if len(olds) < len(news):
         for y, new in enumerate(news[len(olds):]):
-            ds.append((len(olds) + y, [(0, new)]))
+            ds.append((len(olds) + y, LineDiff([(0, new)])))
 
-    return ds
+    return MultiLineDiff(ds)
 
 #
 # Demo
@@ -729,18 +821,23 @@ def multiline_diff(olds, news):
 
 
 def string_to_screen_line(s):
-    return [(ch, None, None) for ch in s]
+    # type: (str) -> ScreenLine
+    return [ScreenTixel(ch, None, None) for ch in s]
 
 
 class App(object):
     def __init__(self):
-        self.count = 0
+        # type: () -> None
+        self.count = 0  # type: int
 
     def run(self):
-        ScreenManager().run_app(self)
+        # type: () -> None
+        ScreenManager().run_app(self.run_with_screen)
 
     def run_with_screen(self, screen):
-        events = []
+        # type: (Screen) -> Generator[None, Optional[Event], None]
+        events = []  # type: List[Event]
+        i: int
         for i in range(15):
             screen.draw([string_to_screen_line(repr(self.count))] +
                         [string_to_screen_line(repr(e)) for e in events])
@@ -751,7 +848,8 @@ class App(object):
 
                 # Throw a SystemExit error
                 # raise SystemExit
-                screen.draw([string_to_screen_line('Showing cursor at 5,10')])
+                screen.draw(
+                    [string_to_screen_line('Showing cursor at 5,10')])
                 screen.show_cursor()
                 screen.set_cursor_position(5, 10)
                 time.sleep(2)
@@ -770,7 +868,8 @@ class App(object):
                 screen.draw([string_to_screen_line(repr(self.count))] +
                             [string_to_screen_line(repr(e)) for e in events])
             ev = yield
-            events.append(ev)
+            if ev is not None:
+                events.append(ev)
             self.count += 1
 
 
@@ -794,15 +893,19 @@ if __name__ == '__main2__':
 
 if __name__ == '__main3__':
     def bouncer():
+        # type: () -> Generator[int, Optional[str], None]
         print('hello')
+        x: Optional[str]
         x = yield 1
         print('x = ' + repr(x))
+        y: Optional[str]
         y = yield 2
         print('y = ' + repr(y))
+        z: Optional[str]
         z = yield 3
         print('z = ' + repr(z))
 
-    bounce = bouncer()
+    bounce = bouncer()  # type: Generator[int, Optional[str], None]
     print('--')
     try:
         print(bounce.send(None))

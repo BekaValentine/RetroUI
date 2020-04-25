@@ -1,5 +1,8 @@
-from retroui.terminal.tixel import *
-from retroui.terminal.view import *
+from typing import List
+
+from retroui.terminal.color import Color, Black, White
+from retroui.terminal.tixel import Tixel
+from retroui.terminal.view import View
 
 
 class FillView(View):
@@ -15,15 +18,18 @@ class FillView(View):
     __slots__ = ['fill_character']
 
     def __init__(self):
+        # type: () -> None
         super().__init__()
 
-        self.fill_character = ' '
+        self.fill_character = ' '  # type: str
 
     def set_fill_character(self, character):
+        # type: (str) -> None
         """
         Sets the fill character.
         """
         self.fill_character = character
 
     def draw(self):
-        return self.size.height * [self.size.width * [Tixel(self.fill_character, None, None)]]
+        # type: () -> List[List[Tixel]]
+        return self.size.height * [self.size.width * [Tixel(self.fill_character, White, Black)]]

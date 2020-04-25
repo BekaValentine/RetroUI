@@ -1,11 +1,14 @@
-from retroui.terminal.event import *
-from retroui.terminal.point import *
-from retroui.terminal.view import *
-from retroui.terminal.clipview import *
-from retroui.terminal.emptyview import *
-from retroui.terminal.scroller import *
+from typing import List, Tuple
 
-from retroui.terminal.textview import *
+from retroui.terminal.color import Color, Black, White
+from retroui.terminal.event import Event
+from retroui.terminal.point import Point
+from retroui.terminal.size import Size
+from retroui.terminal.tixel import Tixel
+from retroui.terminal.view import View
+from retroui.terminal.clipview import ClipView
+from retroui.terminal.emptyview import EmptyView
+from retroui.terminal.scroller import Scroller
 
 
 class ScrollView(View):
@@ -19,30 +22,32 @@ class ScrollView(View):
                  'document_view', 'vertical_scroller', 'horizontal_scroller']
 
     def __init__(self):
+        # type: () -> None
         super().__init__()
 
-        self._scroll_x = 0
-        self._scroll_y = 0
+        self._scroll_x = 0  # type: int
+        self._scroll_y = 0  # type: int
 
-        self.autohides_scrollers = False
+        self.autohides_scrollers = False  # type: bool
 
-        self.content_view = ClipView()
+        self.content_view = ClipView()  # type: ClipView
         self.content_view.set_superview(self)
         self.content_view.set_size(
             Size(self.size.width - 1, self.size.height - 1))
 
-        self.document_view = self.content_view.document_view
+        self.document_view = self.content_view.document_view  # type: View
 
-        self.vertical_scroller = Scroller()
+        self.vertical_scroller = Scroller()  # type: Scroller
         self.vertical_scroller.set_superview(self)
         self.vertical_scroller.set_size(Size(1, self.size.height - 1))
 
-        self.horizontal_scroller = Scroller()
+        self.horizontal_scroller = Scroller()  # type: Scroller
         self.horizontal_scroller.set_superview(self)
         self.horizontal_scroller.set_is_vertical(False)
         self.horizontal_scroller.set_size(Size(self.size.width - 1, 1))
 
     def set_document_view(self, view):
+        # type: (View) -> None
         """
         Set the document view.
         """
@@ -51,17 +56,20 @@ class ScrollView(View):
         self.content_view.set_document_view(view)
 
     def subviews(self):
+        # type: () -> List[View]
         return [self.content_view, self.vertical_scroller, self.horizontal_scroller]
 
     def set_autohides_scrollers(self, yn):
+        # type: (bool) -> None
         """
         Set whether or not the `ScrollView` automatically hides its scrollers
         when they're not necessary.
         """
 
-        self.autohides_scrollers = bool(yn)
+        self.autohides_scrollers = yn
 
     def update_content_view_size(self):
+        # type: () -> None
         """
         Updates the size of the content view based on this view's size, as
         well as the size of the document view, and whether or not the
@@ -87,6 +95,7 @@ class ScrollView(View):
         self.content_view.set_size(Size(width, height))
 
     def can_hide_scrollers(self):
+        # type: () -> Tuple[bool, bool]
         """
         Determine for each scroller whether it can be hidden.
 
@@ -133,7 +142,11 @@ class ScrollView(View):
             # will clip some content and we must show vertical scroller
             return (False, False)
 
+        else:
+            raise RuntimeError('This branch should never be reached.')
+
     def ensure_content_is_not_overscrolled(self):
+        # type: () -> None
         """
         Constrains the position of the document view so that it's never
         scrolled too far.
@@ -159,6 +172,7 @@ class ScrollView(View):
                 self.scroll_to_line(0)
 
     def update_scroller_sizes(self):
+        # type: () -> None
         """
         Updates the size of the scrollers based on the `ScrollView`'s size,
         and whether or not the scrollers can be hidden.
@@ -185,6 +199,7 @@ class ScrollView(View):
         self.horizontal_scroller.set_size(Size(width, 1))
 
     def update_scroller_fractions(self):
+        # type: () -> None
         """
         Update the visible fractions of the scrollers based on the document
         view's size in relation to the content view's size.
@@ -210,6 +225,7 @@ class ScrollView(View):
         self.horizontal_scroller.set_visible_fraction(hfrac)
 
     def update_scroller_positions(self):
+        # type: () -> None
         """
         Update the scrollers' scroll positions to reflect the current scroll
         position of the `ScrollView`.
@@ -234,6 +250,7 @@ class ScrollView(View):
                 self.horizontal_scroller.set_scroll_position(0.0)
 
     def vertical_scroll(self, amt):
+        # type: (int) -> None
         """
         Scroll vertically by the given number of lines.
         """
@@ -241,6 +258,7 @@ class ScrollView(View):
         self.scroll_to_line(self._scroll_y + amt)
 
     def scroll_to_line(self, line):
+        # type: (int) -> None
         """
         Scroll vertically to a specific line.
         """
@@ -255,6 +273,7 @@ class ScrollView(View):
             Point(self.content_view.origin.x, self._scroll_y))
 
     def horizontal_scroll(self, amt):
+        # type: (int) -> None
         """
         Scroll horizontally by the given number of columns.
         """
@@ -262,6 +281,7 @@ class ScrollView(View):
         self.scroll_to_column(self._scroll_x + amt)
 
     def scroll_to_column(self, col):
+        # type: (int) -> None
         """
         Scroll horizontally to a specific column.
         """
@@ -276,6 +296,7 @@ class ScrollView(View):
             Point(self._scroll_x, self.content_view.origin.y))
 
     def key_press(self, ev):
+        # type: (Event) -> None
         """
         Handle a key press.
 
@@ -306,6 +327,7 @@ class ScrollView(View):
             super().key_press(ev)
 
     def draw(self):
+        # type: () -> List[List[Tixel]]
         self.update_content_view_size()
         self.ensure_content_is_not_overscrolled()
         self.update_scroller_sizes()
@@ -332,6 +354,6 @@ class ScrollView(View):
                 lines.append(hscroll_lines[0])
             else:
                 lines.append(
-                    hscroll_lines[0] + [Tixel(' ', Color.White, Color.Black)])
+                    hscroll_lines[0] + [Tixel(' ', White, Black)])
 
         return self.bound_lines(lines)

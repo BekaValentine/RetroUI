@@ -1,8 +1,12 @@
-from retroui.terminal.color import *
-from retroui.terminal.point import *
-from retroui.terminal.responder import *
-from retroui.terminal.size import *
-from retroui.terminal.tixel import *
+from typing import List, Optional
+
+
+from retroui.terminal.application import *
+from retroui.terminal.color import Color, Black, White
+from retroui.terminal.point import Point
+from retroui.terminal.responder import Responder
+from retroui.terminal.size import Size
+from retroui.terminal.tixel import Tixel
 
 
 class View(Responder):
@@ -28,24 +32,24 @@ class View(Responder):
     """
 
     @staticmethod
-    def put_in_bounds(lines, origin, size):
-        return View.fit_to_size(View.offset_to_origin(lines, origin), size)
-
-    @staticmethod
     def offset_to_origin(lines, point):
+        # type: (List[List[Tixel]], Point) -> List[List[Tixel]]
         """
         Moves content so that the origin of the lines is at the point. Flips
         and pads the top and left edges as necessary.
         """
 
+        hoffset_lines = []  # type: List[List[Tixel]]
         if point.x <= 0:
             hoffset_lines = [-point.x *
-                             [Tixel(' ', Color.White, Color.Black)] + line for line in lines]
+                             [Tixel(' ', White, Black)] + line for line in lines]
         else:
             hoffset_lines = [line[point.x:] for line in lines]
 
+        bothoffset_lines = []  # type: List[List[Tixel]]
         if point.y <= 0:
-            bothoffset_lines = -point.y * [[]] + hoffset_lines
+            bothoffset_lines = -point.y * [[]] + \
+                hoffset_lines
         else:
             bothoffset_lines = hoffset_lines[point.y:]
 
@@ -53,14 +57,16 @@ class View(Responder):
 
     @staticmethod
     def fit_to_width(line, width):
+        # type: (List[Tixel], int) -> List[Tixel]
 
         if len(line) < width:
-            return line + (width - len(line)) * [Tixel(' ', Color.White, Color.Black)]
+            return line + (width - len(line)) * [Tixel(' ', White, Black)]
         else:
             return line[:width]
 
     @staticmethod
     def fit_to_height(lines, height):
+        # type: (List[List[Tixel]], int) -> List[List[Tixel]]
 
         if len(lines) < height:
             return lines + (height - len(lines)) * [[]]
@@ -69,6 +75,7 @@ class View(Responder):
 
     @staticmethod
     def fit_to_size(lines, size):
+        # type: (List[List[Tixel]], Size) -> List[List[Tixel]]
         """
         Fits lines to completely fill the given size by padding with spaces on
         the right, and space-filled lines at the bottom. Clips overflow as
@@ -82,16 +89,23 @@ class View(Responder):
 
         return bothfit_lines
 
+    @staticmethod
+    def put_in_bounds(lines, origin, size):
+        # type: (List[List[Tixel]], Point, Size) -> List[List[Tixel]]
+        return View.fit_to_size(View.offset_to_origin(lines, origin), size)
+
     __slots__ = ['application', 'superview', 'size', 'origin']
 
     def __init__(self):
+        # type: () -> None
         super().__init__()
-        self.application = None
-        self.superview = None
-        self.size = Size(0, 0)
-        self.origin = Point(0, 0)
+        self.application = None  # type: Optional[Application]
+        self.superview = None  # type: Optional[View]
+        self.size = Size(0, 0)  # type: Size
+        self.origin = Point(0, 0)  # type: Point
 
     def accepts_first_responder(self):
+        # type: () -> bool
         """
         Whether or not the view can become the first responder in an
         application.
@@ -104,6 +118,7 @@ class View(Responder):
         return True
 
     def next_responder(self):
+        # type: () -> Optional[Responder]
         """
         The next responder in the responder chain after this view.
 
@@ -115,6 +130,7 @@ class View(Responder):
             return self.application
 
     def set_application(self, application):
+        # type: (Application) -> None
         """
         Set the application that this view is part of.
         """
@@ -125,16 +141,19 @@ class View(Responder):
             subview.set_application(application)
 
     def set_superview(self, superview):
+        # type: (View) -> None
         """
         Set the superview of this view.
         """
 
         self.will_move_to_superview(superview)
         self.superview = superview
-        self.set_application(superview.application)
+        if superview.application is not None:
+            self.set_application(superview.application)
         self.did_move_to_superview()
 
     def will_move_to_superview(self, view):
+        # type: (View) -> None
         """
         Actions to perform before the view moves to a superview.
 
@@ -145,6 +164,7 @@ class View(Responder):
         pass
 
     def did_move_to_superview(self):
+        # type: () -> None
         """
         Actions to perform after the view moves to a superview.
 
@@ -155,6 +175,7 @@ class View(Responder):
         pass
 
     def subviews(self):
+        # type: () -> List[View]
         """
         The subviews of this view.
 
@@ -165,6 +186,7 @@ class View(Responder):
         return []
 
     def set_origin(self, new_origin):
+        # type: (Point) -> None
         """
         Sets the origin of the view in its internal coordinate system.
         """
@@ -173,6 +195,7 @@ class View(Responder):
         self.origin_did_change()
 
     def constrain_origin(self, new_origin):
+        # type: (Point) -> Point
         """
         Constrains the new origin of the view.
 
@@ -182,6 +205,7 @@ class View(Responder):
         return Point(0, 0)
 
     def origin_did_change(self):
+        # type: () -> None
         """
         Actions to perform after the view's origin changes.
 
@@ -192,6 +216,7 @@ class View(Responder):
         pass
 
     def set_size(self, new_size):
+        # type: (Size) -> None
         """
         Set the size of the view.
         """
@@ -201,6 +226,7 @@ class View(Responder):
         self.size_did_change()
 
     def constrain_size(self, new_size):
+        # type: (Size) -> Size
         """
         Constrains the new size of the view.
 
@@ -211,6 +237,7 @@ class View(Responder):
         return new_size
 
     def size_did_change(self):
+        # type: () -> None
         """
         Actions to perform after the view's origin changes.
 
@@ -221,6 +248,7 @@ class View(Responder):
         pass
 
     def bound_lines(self, lines):
+        # type: (List[List[Tixel]]) -> List[List[Tixel]]
         """
         Put the given lines into the bounds of the receiving view.
         """
@@ -228,6 +256,7 @@ class View(Responder):
         return View.put_in_bounds(lines, self.origin, self.size)
 
     def draw(self):
+        # type: () -> List[List[Tixel]]
         """
         Draw the visible portion of the view's coordinate space, as determined
         by the view's size and origin.

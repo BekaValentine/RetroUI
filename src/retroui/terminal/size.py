@@ -14,8 +14,10 @@ class Size(object):
     __slots__ = ['width', 'height']
 
     def __init__(self, width, height):
-        self.width = width
-        self.height = height
+        # type: (int,int) -> None
+        self.width = width  # type: int
+        self.height = height  # type: int
 
     def __repr__(self):
+        # type: () -> str
         return 'Size(%i,%i)' % (self.width, self.height)

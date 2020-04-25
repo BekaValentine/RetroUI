@@ -1,3 +1,6 @@
+from retroui.terminal.minmax import minmax
+
+
 class Color(object):
     """
     A `Color` represents an RGBA color.
@@ -20,21 +23,27 @@ class Color(object):
     __slots__ = ['red', 'green', 'blue', 'alpha']
 
     def __init__(self, r, g, b, a):
-        self.red = r
-        self.green = g
-        self.blue = b
-        self.alpha = a
+        # type: (int,int,int,int) -> None
+        self.red = minmax(r, 0, 255)  # type: int
+        self.green = minmax(g, 0, 255)  # type: int
+        self.blue = minmax(b, 0, 255)  # type: int
+        self.alpha = minmax(a, 0, 255)  # type: int
+
+    def __repr__(self):
+        # type: () -> str
+        return 'Color(%s,%s,%s,%s)' % (self.red, self.green, self.blue, self.alpha)
 
 
-Color.Black = Color(0, 0, 0, 255)
-Color.Grey = Color.Gray = Color(127, 127, 127, 255)
-Color.White = Color(255, 255, 255, 255)
-Color.Red = Color(255, 0, 0, 255)
-Color.Orange = Color(255, 127, 0, 255)
-Color.Yellow = Color(255, 255, 0, 255)
-Color.Green = Color(0, 255, 0, 255)
-Color.Teal = Color(0, 255, 255, 255)
-Color.Blue = Color(0, 0, 255, 255)
-Color.Purple = Color(127, 0, 255, 255)
-Color.Magenta = Color(255, 0, 255, 255)
-Color.Clear = Color(0, 0, 0, 0)
+Black = Color(0, 0, 0, 255)  # type: Color
+Grey = Color(127, 127, 127, 255)  # type: Color
+# Gray = Grey  # type: Color
+White = Color(255, 255, 255, 255)  # type: Color
+# Red = Color(255, 0, 0, 255)  # type: Color
+# Orange = Color(255, 127, 0, 255)  # type: Color
+# Yellow = Color(255, 255, 0, 255)  # type: Color
+# Green = Color(0, 255, 0, 255)  # type: Color
+# Teal = Color(0, 255, 255, 255)  # type: Color
+# Blue = Color(0, 0, 255, 255)  # type: Color
+# Purple = Color(127, 0, 255, 255)  # type: Color
+# Magenta = Color(255, 0, 255, 255)  # type: Color
+# Clear = Color(0, 0, 0, 0)  # type: Color

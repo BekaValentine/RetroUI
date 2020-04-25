@@ -21,7 +21,8 @@ class Event(object):
                  'has_alt_modifier', 'has_shift_modifier']
 
     def __init__(self, ch, ctrl, alt, shift):
-        self.key_code = ch
-        self.has_ctrl_modifier = ctrl
-        self.has_alt_modifier = alt
-        self.has_shift_modifier = shift
+        # type: (str, bool, bool, bool) -> None
+        self.key_code = ch  # type: str
+        self.has_ctrl_modifier = ctrl  # type: bool
+        self.has_alt_modifier = alt  # type: bool
+        self.has_shift_modifier = shift  # type: bool

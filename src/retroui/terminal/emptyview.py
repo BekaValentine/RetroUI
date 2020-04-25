@@ -1,4 +1,8 @@
-from retroui.terminal.view import *
+from typing import List
+
+from retroui.terminal.color import Color, Black, White
+from retroui.terminal.tixel import Tixel
+from retroui.terminal.view import View
 
 
 class EmptyView(View):
@@ -10,15 +14,16 @@ class EmptyView(View):
     """
 
     def draw(self):
+        # type: () -> List[List[Tixel]]
 
         top_height = int(0.5 * (self.size.height - 1))
         bottom_height = self.size.height - 1 - top_height
         left_width = int(0.5 * (self.size.width - 5))
         right_width = self.size.width - 5 - left_width
 
-        lines = top_height * [self.size.width * [Tixel(' ', Color.White, Color.Black)]] + \
-            [left_width * [Tixel(' ', Color.White, Color.Black)] + [Tixel(c, Color.White, Color.Black) for c in 'empty'] + right_width * [Tixel(' ', Color.White, Color.Black)]] + \
+        lines = top_height * [self.size.width * [Tixel(' ', White, Black)]] + \
+            [left_width * [Tixel(' ', White, Black)] + [Tixel(c, White, Black) for c in 'empty'] + right_width * [Tixel(' ', White, Black)]] + \
             bottom_height * [self.size.width *
-                             [Tixel(' ', Color.White, Color.Black)]]
+                             [Tixel(' ', White, Black)]]
 
         return self.bound_lines(lines)

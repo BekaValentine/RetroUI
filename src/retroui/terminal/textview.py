@@ -1,8 +1,12 @@
 import math
 import re
 import textwrap
+from typing import List, Optional
 
-from retroui.terminal.view import *
+from retroui.terminal.color import Color, Black, White
+from retroui.terminal.size import Size
+from retroui.terminal.tixel import Tixel
+from retroui.terminal.view import View
 
 
 class TextView(View):
@@ -57,6 +61,7 @@ class TextView(View):
 
     @staticmethod
     def split_at_length(text, length):
+        # type: (str,int) -> List[str]
         """
         Splits a string into sequential segments no longer than the given
         length.
@@ -71,6 +76,7 @@ class TextView(View):
 
     @staticmethod
     def align(text, alignment, width):
+        # type: (str,str,int) -> str
         """
         Aligns a text line in the specified direction within the given width.
         """
@@ -86,6 +92,7 @@ class TextView(View):
 
     @staticmethod
     def left_align(text, width):
+        # type: (str,int) -> str
         """
         Aligns the text left, by padding the right edge with spaces up to the
         given width.
@@ -95,6 +102,7 @@ class TextView(View):
 
     @staticmethod
     def right_align(text, width):
+        # type: (str,int) -> str
         """
         Aligns the text right, by padding the left edge with spaces up to the
         given width.
@@ -104,6 +112,7 @@ class TextView(View):
 
     @staticmethod
     def center_align(text, width):
+        # type: (str,int) -> str
         """
         Aligns the text center, by padding the left and right edges with spaces
         up to the given width.
@@ -114,6 +123,7 @@ class TextView(View):
 
     @staticmethod
     def justify(text, width):
+        # type: (str, int) -> str
         """
         Aligns the text justified, by inserting spaces between words up to the
         given width.
@@ -141,17 +151,19 @@ class TextView(View):
                  'line_break_width', 'alignment']
 
     def __init__(self):
+        # type: () -> None
         super().__init__()
 
-        self.text = ''
-        self._text_pars = []
-        self.line_break_width = None
-        self.line_break_mode = 'word_wrapping'
-        self.alignment = 'left'
+        self.text = ''  # type: str
+        self._text_pars = []  # type: List[List[str]]
+        self.line_break_width = None  # type: Optional[int]
+        self.line_break_mode = 'word_wrapping'  # type: str
+        self.alignment = 'left'  # type: str
 
         self.recalculate_text_pars()
 
     def set_text(self, text):
+        # type: (str) -> None
         """
         Set the text of the view.
 
@@ -163,6 +175,7 @@ class TextView(View):
         self.recalculate_text_pars()
 
     def set_line_break_mode(self, mode):
+        # type: (str) -> None
         """
         Set the line break mode.
 
@@ -174,6 +187,7 @@ class TextView(View):
         self.recalculate_text_pars()
 
     def set_line_break_width(self, width):
+        # type: (int) -> None
         """
         Set the line break width.
 
@@ -185,6 +199,7 @@ class TextView(View):
         self.recalculate_text_pars()
 
     def set_alignment(self, align):
+        # type: (str) -> None
         """
         Set the text alignment.
         """
@@ -195,6 +210,7 @@ class TextView(View):
             self.alignment = 'left'
 
     def recalculate_text_pars(self):
+        # type: () -> None
         """
         Re-calculates the `_text_pars` property.
 
@@ -245,7 +261,7 @@ class TextView(View):
 
                     self._text_pars.append(par)
 
-                else:  # default, includes 'word_wrapping':
+                else:
                     if not line:
                         par = ['']
                     else:
@@ -258,6 +274,7 @@ class TextView(View):
         self.recalculate_size()
 
     def recalculate_size(self):
+        # type: () -> None
         """
         Recalculates the size of the view based on the `_text_pars` property.
 
@@ -279,12 +296,13 @@ class TextView(View):
             self.set_size(Size(new_width, new_height))
 
     def draw(self):
+        # type: () -> List[List[Tixel]]
         lines = []
         for par in self._text_pars:
             lines += [TextView.align(line, self.alignment,
                                      self.size.width) for line in par]
 
-        tixel_lines = [[Tixel(c, Color.White, Color.Black)
+        tixel_lines = [[Tixel(c, White, Black)
                         for c in line] for line in lines]
-
+        #raise ValueError(White)
         return tixel_lines

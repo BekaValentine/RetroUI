@@ -1,5 +1,9 @@
-from retroui.terminal.view import *
-from retroui.terminal.emptyview import *
+from typing import List
+
+from retroui.terminal.point import Point
+from retroui.terminal.tixel import Tixel
+from retroui.terminal.view import View
+from retroui.terminal.emptyview import EmptyView
 
 
 class ClipView(View):
@@ -16,11 +20,13 @@ class ClipView(View):
     __slots__ = ['document_view']
 
     def __init__(self):
+        # type: () -> None
         super().__init__()
 
-        self.document_view = EmptyView()
+        self.document_view = EmptyView()  # type: View
 
     def set_document_view(self, view):
+        # type: (View) -> None
         """
         Set the document view of this view.
         """
@@ -29,9 +35,11 @@ class ClipView(View):
         view.set_superview(self)
 
     def subviews(self):
+        # type: () -> List[View]
         return [self.document_view]
 
     def constrain_origin(self, new_origin):
+        # type: (Point) -> Point
         """
         Constrains the origin of the `ClipView`.
 
@@ -43,6 +51,7 @@ class ClipView(View):
         return new_origin
 
     def draw(self):
+        # type: () -> List[List[Tixel]]
         if self.document_view is None:
             lines = []
         else:

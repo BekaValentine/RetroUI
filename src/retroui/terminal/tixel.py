@@ -1,3 +1,8 @@
+from typing import List, Optional, Tuple
+
+from retroui.terminal.color import Color
+
+
 class Tixel(object):
     """
     A `Tixel` is a textual picture element, corresponding to a single character
@@ -19,24 +24,22 @@ class Tixel(object):
 
     """
 
-    @staticmethod
-    def tixels(line, fg, bg):
-        """
-        Convert a string into a line of tixels with the same foreground and
-        background colors.
-        """
-
-        return [Tixel(c, fg, bg) for c in line]
-
     def __init__(self, ch, fg, bg):
+        # type: (str, Optional[Color], Optional[Color]) -> None
+        self.character = ''  # type: str
         if len(ch) >= 1:
             self.character = ch[0]
         else:
             self.character = ' '
-        self.foreground_color = fg
-        self.background_color = bg
+        self.foreground_color = fg  # type: Optional[Color]
+        self.background_color = bg  # type: Optional[Color]
+
+    def __repr__(self):
+        # type: () -> str
+        return '<Tixel fg=%s bg=%s>' % (self.foreground_color, self.background_color)
 
     def render_to_screen_tixel(self):
+        # type: () -> Tuple[str, Optional[Tuple[int, int, int]], Optional[Tuple[int, int, int]]]
         """
         Converts the tixel to the representation required for `ScreenManager` to
         properly draw it.
@@ -57,3 +60,13 @@ class Tixel(object):
                   self.background_color.blue)
 
         return (self.character, fg, bg)
+
+
+def tixels(line, fg, bg):
+    # type: (str, Color, Color) -> List[Tixel]
+    """
+    Convert a string into a line of tixels with the same foreground and
+    background colors.
+    """
+
+    return [Tixel(c, fg, bg) for c in line]
