@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import cast, List, Optional
 
 
 from retroui.terminal.application import *
@@ -48,7 +48,7 @@ class View(Responder):
 
         bothoffset_lines = []  # type: List[List[Tixel]]
         if point.y <= 0:
-            bothoffset_lines = -point.y * [[]] + \
+            bothoffset_lines = -point.y * cast(List[List[Tixel]], [[]]) + \
                 hoffset_lines
         else:
             bothoffset_lines = hoffset_lines[point.y:]
@@ -69,7 +69,7 @@ class View(Responder):
         # type: (List[List[Tixel]], int) -> List[List[Tixel]]
 
         if len(lines) < height:
-            return lines + (height - len(lines)) * [[]]
+            return lines + (height - len(lines)) * cast(List[List[Tixel]], [[]])
         else:
             return lines[:height]
 

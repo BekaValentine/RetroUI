@@ -1,4 +1,4 @@
-from typing import Callable, List, Optional
+from typing import Callable, cast, List, Optional
 
 from retroui.terminal.color import Color, Black, White
 from retroui.terminal.size import Size
@@ -153,7 +153,8 @@ class BarIndicator(View):
                 ro = [Tixel(c, White, Black)
                       for c in readout]  # type: List[Tixel]
                 if self.readout_position == 'beginning':
-                    lines_with_readout = [ro, []] + main_lines
+                    lines_with_readout = cast(List[List[Tixel]], [ro, []]) + \
+                        main_lines
                 else:
                     lines_with_readout = main_lines + [[], ro]
 

@@ -6,7 +6,7 @@ import termios
 import multiprocessing
 import tty
 import traceback
-from typing import Any, Callable, Generator, List, NewType, Optional, Tuple, Union
+from typing import Any, Callable, cast, Generator, List, NewType, Optional, Tuple, Union
 
 
 ESCAPE_SEQUENCES = {
@@ -401,7 +401,7 @@ class ScreenManager(object):
         """
 
         if len(lines) < height:
-            return lines + (height - len(lines)) * [[]]
+            return lines + (height - len(lines)) * cast(ScreenContent, [[]])
         else:
             return lines[:height]
 
