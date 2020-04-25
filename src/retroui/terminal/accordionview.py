@@ -117,7 +117,7 @@ class AccordionView(View):
         Set whether or not the view at the specified index is expanded.
         """
 
-        self._accordion_info[ix].is_expanded = bool(yn)
+        self._accordion_info[ix].is_expanded = yn
 
         if yn and not self.allows_multiple_expansions:
             for i, entry in enumerate(self._accordion_info):
