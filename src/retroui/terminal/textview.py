@@ -253,7 +253,7 @@ class TextView(View):
 
                     self._text_pars.append(par)
 
-                elif self.line_break_mode == 'truncating_middle':
+                elif self.line_break_mode == 'truncating_both':
                     if len(line) <= self.line_break_width:
                         par = [line]
                     else:
