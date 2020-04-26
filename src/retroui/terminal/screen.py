@@ -9,6 +9,11 @@ import traceback
 from typing import Any, Callable, cast, Generator, List, NewType, Optional, Tuple, Union
 
 
+CONTROL_CHARACTERS = {
+    '\r': 'Enter',
+    '\n': 'Enter'
+}
+
 ESCAPE_SEQUENCES = {
     '\x1b[1~': 'Home',
     '\x1b[2~': 'Insert',
@@ -599,7 +604,7 @@ class ScreenManager(object):
         This will return a multi-character string for any keypress events that
         write multiple characters to standard input. The contents are replaced
         with cleaned up representations where possible, using the substitutions
-        defined by `ESCAPE_SEQUENCES` and `MODIFIERS`.
+        defined by `CONTROL_CHARACTERS`, `ESCAPE_SEQUENCES` and `MODIFIERS`.
         """
 
         char_with_mods = str(
@@ -607,17 +612,32 @@ class ScreenManager(object):
         ctrl = False
         alt = False
         shift = False
+
         if len(char_with_mods) == 1:
-            ch = char_with_mods
+            if char_with_mods in CONTROL_CHARACTERS:
+                ch = CONTROL_CHARACTERS[char_with_mods]
+            else:
+                ch = char_with_mods
+
         if len(char_with_mods) != 1:
-            if char_with_mods in ESCAPE_SEQUENCES:
-                ch = ESCAPE_SEQUENCES[char_with_mods]
-            elif char_with_mods[: 5] in MODIFIERS and ('\x1b[' + char_with_mods[5:]) in ESCAPE_SEQUENCES:
-                ch = ESCAPE_SEQUENCES['\x1b[' + char_with_mods[5:]]
-                mods = MODIFIERS[char_with_mods[: 5]]
+
+            if char_with_mods[:5] in MODIFIERS and char_with_mods[5:] in CONTROL_CHARACTERS:
+                ch = CONTROL_CHARACTERS[char_with_mods[5:]]
+                mods = MODIFIERS[char_with_mods[:5]]
                 ctrl = 'Ctrl' in mods
                 alt = 'Alt' in mods
                 shift = 'Shift' in mods
+
+            elif char_with_mods in ESCAPE_SEQUENCES:
+                ch = ESCAPE_SEQUENCES[char_with_mods]
+
+            elif char_with_mods[:5] in MODIFIERS and ('\x1b[' + char_with_mods[5:]) in ESCAPE_SEQUENCES:
+                ch = ESCAPE_SEQUENCES['\x1b[' + char_with_mods[5:]]
+                mods = MODIFIERS[char_with_mods[:5]]
+                ctrl = 'Ctrl' in mods
+                alt = 'Alt' in mods
+                shift = 'Shift' in mods
+
             else:
                 ch = char_with_mods
         return (ch, ctrl, alt, shift)
