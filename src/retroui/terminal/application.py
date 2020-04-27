@@ -1,9 +1,9 @@
-from typing import Generator, List, Optional
+from typing import cast, Generator, List, Optional
 
 # import curses
 import retroui.terminal.screen as screen
 
-from retroui.terminal.color import Color, Black, White
+from retroui.terminal.color import Color, Black, White, Orange
 from retroui.terminal.event import Event
 from retroui.terminal.responder import Responder, NoResponderException
 from retroui.terminal.size import Size
@@ -171,9 +171,8 @@ class Application(Responder):
                             None if scrtx[2] is None else screen.ScreenColor(scrtx[2][0], scrtx[2][1], scrtx[2][2])))
                     rendered_lines_for_screen.append(rendered_line)
 
-                max_height, max_width = scr.get_size()
-                if self._debug:
-                    max_height -= 10
+                max_width, max_height = scr.get_size()
+                non_debug_height = max_height
                 # try:
                 #     for y, line in enumerate(rendered_lines[:max_height]):
                 #         self._screen.addstr(y, 0, line[:max_width])
@@ -181,17 +180,21 @@ class Application(Responder):
                 #     pass
                 # scr.draw(rendered_lines_for_screen)
 
+                self.set_debug(True)
+                self.debug_log(__import__('random').randrange(1, 10) * 'Hi')
                 if not self._debug:
-                    #raise ValueError(rendered_lines[0][:5])
+                    # raise ValueError(rendered_lines[0][:5])
                     scr.draw(rendered_lines_for_screen)
                 else:
-                    debug_lines = ['DEBUG ' +
+                    non_debug_height -= 10
+                    debug_lines = ['DEBUG: ' +
                                    line for line in self._debug_log[-10:]]
                     debug_lines_for_screen = []
                     debug_line = ''  # type: str
                     for debug_line in debug_lines:
+                        debug_line = debug_line[:max_width]
                         rendered_line = []
-                        for tixel in tixels(debug_line, White, Black):
+                        for tixel in tixels(debug_line, Black, Orange):
                             scrtx = tixel.render_to_screen_tixel()
                             rendered_line.append(screen.ScreenTixel(
                                 scrtx[0],
@@ -200,12 +203,11 @@ class Application(Responder):
                                 None if scrtx[2] is None else screen.ScreenColor(scrtx[2][0], scrtx[2][1], scrtx[2][2])))
                         debug_lines_for_screen.append(rendered_line)
 
-                    if len(rendered_lines_for_screen) <= max_height:
-                        scr.draw(rendered_lines_for_screen + (max_height -
-                                                              len(rendered_lines_for_screen)) * screen.ScreenContent([[]]) + debug_lines_for_screen)
-                    else:
-                        scr.draw(rendered_lines_for_screen[: -10] +
-                                 debug_lines_for_screen)
+                    all_lines_for_screen = rendered_lines_for_screen[:non_debug_height] +\
+                        cast(screen.ScreenContent, (non_debug_height - len(rendered_lines_for_screen)) * [[]]) + \
+                        debug_lines_for_screen
+                    scr.draw(all_lines_for_screen)
+
                     # try:
                     #     for y, line in enumerate(self._debug_log[-10:]):
                     #         self._screen.addstr(
