@@ -36,7 +36,7 @@ class Tixel(object):
 
     def __repr__(self):
         # type: () -> str
-        return '<Tixel fg=%s bg=%s>' % (self.foreground_color, self.background_color)
+        return '<Tixel ch=%s fg=%s bg=%s>' % (repr(self.character), self.foreground_color, self.background_color)
 
     def render_to_screen_tixel(self):
         # type: () -> Tuple[str, Optional[Tuple[int, int, int]], Optional[Tuple[int, int, int]]]
