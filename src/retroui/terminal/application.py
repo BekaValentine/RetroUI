@@ -5,9 +5,11 @@ import retroui.terminal.screen as screen
 
 from retroui.terminal.color import Color, Black, White, Orange
 from retroui.terminal.event import Event
-from retroui.terminal.responder import Responder, NoResponderException
 from retroui.terminal.size import Size
 from retroui.terminal.tixel import Tixel, tixels
+
+from retroui.terminal.responder import Responder, NoResponderException
+from retroui.terminal.panel import Panel
 from retroui.terminal.view import View
 
 
@@ -22,6 +24,9 @@ class Application(Responder):
 
         `_main_view`
             The view that will be used to fill the screen.
+
+        `main_panel`
+            The panel that will be used to fill the screen.
 
         `_first_responder`
             The responder that will handle user input.
@@ -44,6 +49,7 @@ class Application(Responder):
         super().__init__()
         self.name = 'Application'  # type: str
         self._main_view = None  # type: Optional[View]
+        self.main_panel = None  # type: Optional[Panel]
         self._first_responder = None  # type: Optional[Responder]
         self._screen = None  # type: Optional[screen.Screen]
         self._debug = False  # type: bool
@@ -155,8 +161,8 @@ class Application(Responder):
 
         # The main event loop
         while True:
-            # screen.erase()
             if self._main_view:
+
                 rendered_lines = self._main_view.draw()
                 rendered_lines_for_screen = []
                 line = []  # type: List[Tixel]
@@ -173,17 +179,8 @@ class Application(Responder):
 
                 max_width, max_height = scr.get_size()
                 non_debug_height = max_height
-                # try:
-                #     for y, line in enumerate(rendered_lines[:max_height]):
-                #         self._screen.addstr(y, 0, line[:max_width])
-                # except curses.error:
-                #     pass
-                # scr.draw(rendered_lines_for_screen)
 
-                self.set_debug(True)
-                self.debug_log(__import__('random').randrange(1, 10) * 'Hi')
                 if not self._debug:
-                    # raise ValueError(rendered_lines[0][:5])
                     scr.draw(rendered_lines_for_screen)
                 else:
                     non_debug_height -= 10
@@ -208,16 +205,7 @@ class Application(Responder):
                         debug_lines_for_screen
                     scr.draw(all_lines_for_screen)
 
-                    # try:
-                    #     for y, line in enumerate(self._debug_log[-10:]):
-                    #         self._screen.addstr(
-                    #             max_height + y, 0, ('DEBUG: ' + line)[:max_width], curses.A_REVERSE)
-                    # except curses.error:
-                    #     pass
-
-            # ch = screen.getch()
             screen_event = yield
-            # ch == KEY_RESIZE:
             if isinstance(screen_event, screen.ResizeEvent):
                 s = self.main_view_size()
                 if self._main_view is not None and s is not None:
@@ -234,4 +222,3 @@ class Application(Responder):
                     self.key_press(ev)
 
         self.on_terminate()
-        # curses.curs_set(1)
