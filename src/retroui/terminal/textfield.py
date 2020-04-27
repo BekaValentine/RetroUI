@@ -301,4 +301,4 @@ class TextField(View):
 
             rendered_lines.append(rendered_line)
 
-        return rendered_lines
+        return self.bound_lines(rendered_lines)
