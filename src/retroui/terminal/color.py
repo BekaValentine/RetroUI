@@ -36,14 +36,14 @@ class Color(object):
 
 Black = Color(0, 0, 0, 255)  # type: Color
 Grey = Color(127, 127, 127, 255)  # type: Color
-# Gray = Grey  # type: Color
+Gray = Grey  # type: Color
 White = Color(255, 255, 255, 255)  # type: Color
-# Red = Color(255, 0, 0, 255)  # type: Color
-# Orange = Color(255, 127, 0, 255)  # type: Color
-# Yellow = Color(255, 255, 0, 255)  # type: Color
-# Green = Color(0, 255, 0, 255)  # type: Color
-# Teal = Color(0, 255, 255, 255)  # type: Color
-# Blue = Color(0, 0, 255, 255)  # type: Color
-# Purple = Color(127, 0, 255, 255)  # type: Color
-# Magenta = Color(255, 0, 255, 255)  # type: Color
-# Clear = Color(0, 0, 0, 0)  # type: Color
+Red = Color(255, 0, 0, 255)  # type: Color
+Orange = Color(255, 127, 0, 255)  # type: Color
+Yellow = Color(255, 255, 0, 255)  # type: Color
+Green = Color(0, 255, 0, 255)  # type: Color
+Teal = Color(0, 255, 255, 255)  # type: Color
+Blue = Color(0, 0, 255, 255)  # type: Color
+Purple = Color(127, 0, 255, 255)  # type: Color
+Magenta = Color(255, 0, 255, 255)  # type: Color
+Clear = Color(0, 0, 0, 0)  # type: Color
