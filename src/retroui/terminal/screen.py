@@ -11,7 +11,8 @@ from typing import Any, Callable, cast, Generator, List, NewType, Optional, Tupl
 
 CONTROL_CHARACTERS = {
     '\r': 'Enter',
-    '\n': 'Enter'
+    '\n': 'Enter',
+    '\x7f': 'Backspace'
 }
 
 ESCAPE_SEQUENCES = {
