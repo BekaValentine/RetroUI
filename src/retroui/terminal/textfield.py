@@ -64,7 +64,13 @@ class TextField(View):
         return (lines_before, columns_before)
 
     def key_press(self, ev):
-        if ev.key_code == 'Right':
+        if ev.key_code == 'Home':
+            self.cursor_line = 0
+            self.cursor_column = 0
+        elif ev.key_code == 'End':
+            self.cursor_line = len(self._lines) - 1
+            self.cursor_column = len(self._lines[self.cursor_line])
+        elif ev.key_code == 'Right':
             if self.cursor_column + 1 <= len(self._lines[self.cursor_line]):
                 self.cursor_column += 1
             elif self.cursor_line + 1 < len(self._lines):
