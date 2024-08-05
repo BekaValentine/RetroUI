@@ -12,7 +12,8 @@ from typing import Any, Callable, cast, Generator, List, NewType, Optional, Tupl
 CONTROL_CHARACTERS = {
     '\r': 'Enter',
     '\n': 'Enter',
-    '\x7f': 'Backspace'
+    '\x7f': 'Backspace',
+    '\x1b': 'Escape'
 }
 
 ESCAPE_SEQUENCES = {
@@ -841,9 +842,9 @@ def multiline_diff(olds, news):
 #
 
 
-def string_to_screen_line(s):
+def string_to_screen_line(s, fg=None, bg=None):
     # type: (str) -> ScreenLine
-    return [ScreenTixel(ch, None, None) for ch in s]
+    return [ScreenTixel(ch, fg, bg) for ch in s]
 
 
 class App(object):

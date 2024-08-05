@@ -5,6 +5,7 @@ import retroui.terminal.screen as screen
 
 from retroui.terminal.color import Color, Black, White, Orange
 from retroui.terminal.event import Event
+from retroui.terminal.point import Point
 from retroui.terminal.size import Size
 from retroui.terminal.tixel import Tixel, tixels
 
@@ -22,14 +23,14 @@ class Application(Responder):
         `name`
             The name of the application.
 
-        `_main_view`
-            The view that will be used to fill the screen.
-
         `main_panel`
             The panel that will be used to fill the screen.
 
-        `_first_responder`
-            The responder that will handle user input.
+        `non_main_panels`
+            The panels that will be drawn above the main panel.
+
+        `key_panel`
+            The panel that will receive all of the input events.
 
         `_screen`
             The screen object that the application draws to.
@@ -41,31 +42,19 @@ class Application(Responder):
             The log of debugging messages to display when in debugging mode.
     """
 
-    __slots__ = ['name', '_main_view', '_first_responder',
+    __slots__ = ['name', 'main_panel', 'non_main_panels', 'key_panel',
                  '_screen', '_debug', '_debug_log']
 
     def __init__(self):
         # type: () -> None
         super().__init__()
         self.name = 'Application'  # type: str
-        self._main_view = None  # type: Optional[View]
         self.main_panel = None  # type: Optional[Panel]
-        self._first_responder = None  # type: Optional[Responder]
+        self.non_main_panels = []  # type: List[Panel]
+        self.key_panel = None  # type: Optional[Panel]
         self._screen = None  # type: Optional[screen.Screen]
         self._debug = False  # type: bool
         self._debug_log = []  # type: List[str]
-
-    def set_first_responder(self, responder):
-        # type: (Responder) -> None
-        """
-        Sets the first responder of the application.
-        """
-
-        if (self._first_responder is None or self._first_responder.resign_first_responder()) and\
-                responder.accepts_first_responder() and\
-                responder.become_first_responder():
-
-            self._first_responder = responder
 
     def no_responder(self, event):
         # type: (Event) -> None
@@ -78,19 +67,45 @@ class Application(Responder):
         """
         pass
 
-    def set_main_view(self, view):
-        # type: (View) -> None
+    def set_main_panel(self, panel):
+        # type: (Panel) -> None
         """
-        Set the main view of the application.
+        Set the main panel of the application.
+
+        Will resize the panel to fit the screen.
         """
 
-        self._main_view = view
-        view.set_application(self)
-        s = self.main_view_size()
-        if s is not None:
-            view.set_size(s)
+        if panel.can_become_main():
+            if self.main_panel is not None:
+                self.main_panel.resign_main()
 
-    def main_view_size(self):
+            panel.become_main()
+            self.main_panel = panel
+            panel.set_application(self)
+            s = self.main_panel_size()
+            if s is not None:
+                panel.set_size(s)
+
+    def add_panel(self, panel):
+        # type: (Panel) -> None
+        panel.set_application(self)
+        self.non_main_panels.append(panel)
+
+    def set_key_panel(self, panel):
+        # type: (Panel) -> None
+        """
+        Set the key panel of the application.
+        """
+
+        if panel.can_become_key():
+            if self.key_panel is not None:
+                self.key_panel.resign_key()
+
+            panel.become_key()
+            self.key_panel = panel
+            panel.set_application(self)
+
+    def main_panel_size(self):
         # type: () -> Optional[Size]
         """
         Calculate the size for the main view of the application.
@@ -161,64 +176,80 @@ class Application(Responder):
 
         # The main event loop
         while True:
-            if self._main_view:
+            size = self.main_panel_size()
+            if size is None:
+                continue
 
-                rendered_lines = self._main_view.draw()
-                rendered_lines_for_screen = []
-                line = []  # type: List[Tixel]
-                for line in rendered_lines:
-                    rendered_line = []
-                    for tixel in line:
-                        scrtx = tixel.render_to_screen_tixel()
-                        rendered_line.append(screen.ScreenTixel(
-                            scrtx[0],
-                            None if scrtx[1] is None else screen.ScreenColor(
-                                scrtx[1][0], scrtx[1][1], scrtx[1][2]),
-                            None if scrtx[2] is None else screen.ScreenColor(scrtx[2][0], scrtx[2][1], scrtx[2][2])))
-                    rendered_lines_for_screen.append(rendered_line)
+            composited_lines = size.height * \
+                [size.width * [Tixel(' ', Black, Black)]]
 
-                max_width, max_height = scr.get_size()
-                non_debug_height = max_height
+            if self.main_panel is not None:
+                main_panel_lines = self.main_panel.draw()
 
-                if not self._debug:
-                    scr.draw(rendered_lines_for_screen)
-                else:
-                    non_debug_height -= 10
-                    debug_lines = ['DEBUG: ' +
-                                   line for line in self._debug_log[-10:]]
-                    debug_lines_for_screen = []
-                    debug_line = ''  # type: str
-                    for debug_line in debug_lines:
-                        debug_line = debug_line[:max_width]
-                        rendered_line = []
-                        for tixel in tixels(debug_line, Black, Orange):
-                            scrtx = tixel.render_to_screen_tixel()
-                            rendered_line.append(screen.ScreenTixel(
-                                scrtx[0],
-                                None if scrtx[1] is None else screen.ScreenColor(
-                                    scrtx[1][0], scrtx[1][1], scrtx[1][2]),
-                                None if scrtx[2] is None else screen.ScreenColor(scrtx[2][0], scrtx[2][1], scrtx[2][2])))
-                        debug_lines_for_screen.append(rendered_line)
+                composited_lines = composite_over(
+                    composited_lines, Point(0, 0), main_panel_lines)
 
-                    all_lines_for_screen = rendered_lines_for_screen[:non_debug_height] +\
-                        cast(screen.ScreenContent, (non_debug_height - len(rendered_lines_for_screen)) * [[]]) + \
-                        debug_lines_for_screen
-                    scr.draw(all_lines_for_screen)
+            for non_main_panel in self.non_main_panels:
+                composited_lines = composite_over(
+                    composited_lines, non_main_panel.location, non_main_panel.draw())
+
+            scr.draw(convert_lines_to_screen_lines(composited_lines))
 
             screen_event = yield
             if isinstance(screen_event, screen.ResizeEvent):
-                s = self.main_view_size()
-                if self._main_view is not None and s is not None:
-                    self._main_view.set_size(s)
+                s = self.main_panel_size()
+                if self.main_panel is not None and s is not None:
+                    self.main_panel.set_size(s)
             elif isinstance(screen_event, screen.KeyPressEvent):
                 ev = Event(screen_event.key_code, screen_event.has_ctrl_modifier,
                            screen_event.has_alt_modifier, screen_event.has_shift_modifier)
-                if self._first_responder:
+                if self.key_panel:
                     try:
-                        self._first_responder.key_press(ev)
+                        self.key_panel.send_event(ev)
                     except NoResponderException:
-                        self.key_press(ev)
+                        self.key_press
                 else:
                     self.key_press(ev)
 
         self.on_terminate()
+
+
+def composite_over(lines, loc, lines2):
+    # type: (List[List[Tixel]], Point, List[List[Tixel]]) -> List[List[Tixel]]
+
+    # clip lines2 to within the screen
+
+    composited = lines.copy()
+    for dy, line in enumerate(lines2):
+        composited[loc.y + dy] = composited[loc.y + dy][:loc.x] + line + \
+            composited[loc.y + dy][loc.x + len(line):]
+
+    return composited
+
+
+def convert_lines_to_screen_lines(lines):
+    # type: (List[List[Tixel]]) -> screen.ScreenContent
+
+    lines_for_screen = []
+    line = []  # type: List[Tixel]
+    for line in lines:
+        line_for_screen = []
+        for tixel in line:
+
+            scrtx = tixel.render_to_screen_tixel()
+
+            if scrtx[1] is None:
+                fg = None
+            else:
+                fg = screen.ScreenColor(scrtx[1][0], scrtx[1][1], scrtx[1][2])
+
+            if scrtx[2] is None:
+                bg = None
+            else:
+                bg = screen.ScreenColor(scrtx[2][0], scrtx[2][1], scrtx[2][2])
+
+            line_for_screen.append(screen.ScreenTixel(scrtx[0], fg, bg))
+
+        lines_for_screen.append(line_for_screen)
+
+    return lines_for_screen
